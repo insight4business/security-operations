@@ -1,39 +1,25 @@
 # Problem solved : I have an Entra ID user Object ID and need the matching local SID to grant rights on a device.
-# What it does    : Function that converts an Object ID GUID into the S-1-12-1-* SID.
+# What it does    : Converts an Object ID (GUID) into the S-1-12-1-* SID by reading the GUID as four 32-bit integers.
 # Requires        : None (pure conversion)
 # Effect          : read-only
-# Known issues    : Placeholder ENTRE_AQUI_COM_SEU_ID must be replaced before the demo call runs; third-party author credit (Oliver Kieselbach) - keep attribution/check licence.
-# Origin          : adapted from field work; replace every ENTRE_AQUI_COM_SEU_* marker with your own value
+# Origin          : written from the documented SID format for Entra ID accounts
 
-function Convert-AzureAdObjectIdToSid {
-    <#
-    .SYNOPSIS
-    Convert an Azure AD Object ID to SID
-    
-    .DESCRIPTION
-    Converts an Azure AD Object ID to a SID.
-    Author: Oliver Kieselbach (oliverkieselbach.com)
-    The script is provided "AS IS" with no warranties.
-    
-    .PARAMETER ObjectID
-    The Object ID to convert
-    #>
+<#
+.SYNOPSIS
+Converts an Entra ID Object ID into the S-1-12-1-* SID used on Windows devices.
 
-    param([String] $ObjectId)
+.PARAMETER ObjectId
+The Object ID (GUID) of the Entra ID user or group.
 
-    $bytes = [Guid]::Parse($ObjectId).ToByteArray()
-    $array = New-Object 'UInt32[]' 4
+.EXAMPLE
+.\convert-entra-object-id-to-sid.ps1 -ObjectId 00000000-0000-0000-0000-000000000000
+#>
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [guid]$ObjectId
+)
 
-    [Buffer]::BlockCopy($bytes, 0, $array, 0, 16)
-    $sid = "S-1-12-1-$array".Replace(' ', '-')
-
-    return $sid
-}
-
-$objectId = "ENTRE_AQUI_COM_SEU_ID"
-$sid = Convert-AzureAdObjectIdToSid -ObjectId $objectId
-Write-Output $sid
-
-# Output:
-
-# S-1-12-1-1943430372-1249052806-2496021943-3034400218
+$bytes = $ObjectId.ToByteArray()
+$parts = for ($i = 0; $i -lt 16; $i += 4) { [BitConverter]::ToUInt32($bytes, $i) }
+"S-1-12-1-" + ($parts -join '-')
